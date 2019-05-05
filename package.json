@@ -1,0 +1,38 @@
+{
+  "name": "filmapp",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node ."
+  },
+  "dependencies": {
+    "async": "^2.6.1",
+    "bcrypt": "^3.0.2",
+    "body-parser": "latest",
+    "bodymen": "^1.1.0",
+    "cookie-parser": "~1.4.3",
+    "cors": "^2.8.5",
+    "crypto": "^1.0.1",
+    "debug": "~2.6.9",
+    "express": "~4.16.0",
+    "file-type": "^10.6.0",
+    "http-errors": "~1.6.2",
+    "jsonwebtoken": "^8.4.0",
+    "lodash": "latest",
+    "mime-types": "latest",
+    "moment": "^2.24.0",
+    "mongoose": "^5.3.15",
+    "mongoose-gridfs": "^0.5.0",
+    "mongoose-id-validator": "^0.5.0",
+    "morgan": "~1.9.0",
+    "multer": "^1.4.1",
+    "multer-gridfs-storage": "^3.2.3",
+    "nodemailer": "^4.7.0",
+    "passport": "^0.4.0",
+    "passport-http": "^0.3.0",
+    "passport-jwt": "^4.0.0",
+    "pug": "2.0.0-beta11",
+    "read-chunk": "^3.0.0",
+    "sharp": "^0.22.0"
+  }
+}
