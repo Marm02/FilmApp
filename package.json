@@ -3,9 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "start": "node .",
-    "predeploy": "npm run build",
-    "deploy": "gh-pages -d build"
+    "start": "node ."
   },
   "dependencies": {
     "async": "^2.6.1",
@@ -37,6 +35,5 @@
     "pug": "2.0.0-beta11",
     "read-chunk": "^3.0.0",
     "sharp": "^0.22.0"
-  },
-  "homepage": "https://marm02.github.io/FilmAppBackend"
+  }
 }
