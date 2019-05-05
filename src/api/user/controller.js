@@ -139,7 +139,7 @@ const forgot =
             function (token, user, done) {
 
                 const content = 'Change password link:\n\n' +
-                    `http://${ip}:${port}/reset/` + token + '\n\n';
+                    `http://${ip}/reset/` + token + '\n\n';
 
                 sendmail(user.email, 'Reset password!', content, function (err) {
                     done(err, 'done');
