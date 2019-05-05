@@ -48,7 +48,7 @@ const config = {
         mongo: {
             uri: '### PRODUCTION ADDRESS SERVER ###',
         },
-        jwtSecret: process.env.SECRET,
+        jwtSecret: '48mXwHcnH8qEwWgzo24y5BEIxgAU0a',
         mail: {
             auth: {
                 user: 'filmapp4@gmail.com',
