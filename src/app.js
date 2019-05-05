@@ -6,7 +6,7 @@ const api = require('./api');
 
 const mongoose = require('./services/mongoose');
 
-
+console.log(ip);
 const app = express(apiRoot, api);
 
 const server = http.createServer(app);

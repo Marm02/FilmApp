@@ -6,7 +6,7 @@ const config = {
         env: process.env.NODE_ENV || 'development',
         root: path.join(__dirname, '..'),
         port: 9000,
-        ip: 'my-film-app.herokuapp.com',
+        ip: 'localhost',
         apiRoot: '/api',
         uploadDirectory: 'upload',
         mongo: {
