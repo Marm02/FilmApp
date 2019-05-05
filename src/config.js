@@ -43,7 +43,7 @@ const config = {
         jwtSecret: '48mXwHcnH8qEwWgzo24y5BEIxgAU0a'
     },
     production: {
-        ip: process.env.IP || undefined,
+        ip: '0.0.0.0',
         port: process.env.PORT || 8080,
         mongo: {
             uri: 'mongodb+srv://Admin:marian12@filmappcluset-tuxyg.mongodb.net/filmapp-production?retryWrites=true',
