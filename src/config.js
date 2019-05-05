@@ -26,7 +26,7 @@ const config = {
     },
     test: {
         mongo: {
-            uri: 'mongodb://localhost/filmapp-test',
+            uri: 'mongodb+srv://Admin:marian12@filmappcluset-tuxyg.mongodb.net/filmapp-test?retryWrites=true',
             options: {
                 debug: true,
             }
@@ -35,7 +35,7 @@ const config = {
     },
     development: {
         mongo: {
-            uri: 'mongodb://localhost/filmapp-dev',
+            uri: 'mongodb+srv://Admin:marian12@filmappcluset-tuxyg.mongodb.net/filmapp-development?retryWrites=true',
             options: {
                 debug: true,
             }
@@ -46,9 +46,9 @@ const config = {
         ip: process.env.IP || undefined,
         port: process.env.PORT || 8080,
         mongo: {
-            uri: '### PRODUCTION ADDRESS SERVER ###',
+            uri: 'mongodb+srv://Admin:marian12@filmappcluset-tuxyg.mongodb.net/filmapp-production?retryWrites=true',
         },
-        jwtSecret: '48mXwHcnH8qEwWgzo24y5BEIxgAU0a',
+        jwtSecret: process.env.SECRET,
         mail: {
             auth: {
                 user: 'filmapp4@gmail.com',
