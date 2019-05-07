@@ -266,6 +266,7 @@ const showFilm = (req, res, next) => {
 
 };
 
+
 const showOneFilmDescriptionWithoutComments = (req, res, next) => {
 
 
@@ -503,6 +504,7 @@ const updateMeta = function ({body, params}, res, next) {
 
 
 };
+
 
 const destroy = async (req, res, next) => {
 
