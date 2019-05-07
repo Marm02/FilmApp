@@ -252,7 +252,7 @@ const showFilm = (req, res, next) => {
             });
 
 
-            let filmStream = FilmGridFs.read({start: start, end: end, filename: film.filename});
+            let filmStream = FilmGridFs.read({filename: film.filename});
             filmStream.pipe(res);
 
         } else {
