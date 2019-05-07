@@ -1,7 +1,8 @@
+const {createModel} = require("mongoose-gridfs");
+
 const _ = require("lodash");
 
 const {success, notFound} = require('../../services/response/');
-const catchDuplicateFilm = require('./helper').catchDuplicateFilm;
 
 const Film = require('./model').model;
 const User = require('../user/model').model;
@@ -14,92 +15,144 @@ const mime = require('mime-types');
 const ObjectId = require('mongoose').Types.ObjectId;
 
 const sharp = require('sharp');
-const moment = require('moment');
 
 
 const create = async (req, res, next) => {
-    handleGridFsUpload(req, res, (err) => {
+
+
+    handleGridFsUpload(req, res, async (err) => {
+
+        if (err) {
+            return res.status(404).send({error: err.message});
+        }
 
         const user = req.user;
-
-        if (err) return res.status(422).send({error: err.message});
 
         if (!req.files || !req.files.thumbnail || !req.files.file)
             return res.status(404).send({error: 'File or thumbnail not found'});
 
-        const FilmGridFs = require('./gridfs');
 
-        const ThumbnailGridFs = require('../thumbnail/gridfs');
+        const mongoose = require('../../services/mongoose');
 
+        const ThumbnailGridFs = createModel({
+            modelName: 'thumbnails',
+            bucketName: 'thumbnails',
+            connection: mongoose.connection
+        });
 
-        FilmGridFs.readById(req.files.file[0].id, async (err, buff) => {
+        const ThumbnailGridFsSmall = createModel({
+            modelName: 'thumbnails',
+            bucketName: 'thumbnails',
+            connection: mongoose.connection
+        });
 
-            const type = fileType(buff);
+        ThumbnailGridFs.findById({_id: req.files.thumbnail[0].id}, (err, thumbnail) => {
+            const [originalName, mime] = thumbnail.metadata.originalname.split('.');
+            let filmStream = ThumbnailGridFs.read({filename: thumbnail.filename});
 
+            let buffer = [];
 
-            if (type === null || type.mime !== mime.lookup('.mp4')
-                && type.mime !== mime.lookup('.ogg')) {
+            filmStream.on('data', function (chunk) {
+                buffer.push(chunk);
+            });
 
-                return FilmGridFs.unlinkById(req.files.file[0].id, (err, doc) => {
-                    return res.status(400).json({errors: [`That kind of file is not allowed!`]})
-                })
-            }
+            filmStream.on('end', async function () {
 
+                let all = new Buffer.concat(buffer);
 
-            const filmBody = {
-                _id: req.files.file[0].id, thumbnail: req.files.thumbnail[0].id,
-                author: user.id, description: req.body.description, title: req.body.title
-            };
+                const previewName = originalName + Date.now() + '_preview.' + mime;
+                const fileName = originalName + Date.now() + '_thumbnail.' + mime;
+                const posterName = originalName + Date.now() + '_poster.' + mime;
 
-            let film = null;
+                await sharp(all)
+                    .resize(50, Math.round(50 * 9 / 16))
+                    .toBuffer(previewName, (err, buff) => {
 
-            try {
+                        let stream = require('stream');
 
-                ThumbnailGridFs.readById(req.files.thumbnail[0].id, async (err, buff) => {
+                        let bufferStream = new stream.PassThrough();
 
-                    const type = fileType(buff);
+                        bufferStream.end(buff);
 
-                    if (type === null || type.mime !== mime.lookup('.png') && type.mime !== mime.lookup('.jpg')) {
-                        return ThumbnailGridFs.unlinkById(req.files.thumbnail[0].id, (err, doc) => {
-                            return res.status(400).json({errors: [`That kind of file is not allowed!`]})
-                        })
-                    }
-                    const thumbnailBody = {_id: req.files.thumbnail[0].id};
+                        ThumbnailGridFsSmall.write({filename: previewName}, bufferStream,
+                            async (error, file) => {
+                                let thumbnailBody = {
+                                    _id: req.files.thumbnail[0].id,
+                                    preview: file._id,
+                                };
 
-                    try {
-                        filmBody.thumbnail = thumbnailBody;
+                                await sharp(all)
+                                    .resize(250, Math.round(250 * 9 / 16))
+                                    .toBuffer(fileName, (err, buff) => {
 
-                        film = await Film.create(filmBody)
-                            .then((film) => film.view(true));
+                                        let stream = require('stream');
 
+                                        let bufferStream = new stream.PassThrough();
 
-                    } catch (e) {
-                        return ThumbnailGridFs.unlinkById(req.files.thumbnail[0].id, (err, doc) => {
-                            res.status(400).send(e).end();
-                        });
-                    }
+                                        bufferStream.end(buff);
 
+                                        ThumbnailGridFsSmall.write({filename: fileName}, bufferStream,
+                                            async (error, file) => {
 
-                    if (film) {
-                        user.films.push(film.id);
+                                                thumbnailBody.small = file._id;
 
-                        {
-                            await user.save();
-                            success(res, 201)(film);
-                        }
-                    }
-                });
-            } catch (e) {
-                return FilmGridFs.unlinkById(req.files.file[0].id, (err, doc) => {
-                    res.status(400).send(e).end();
-                });
-            }
+                                                await sharp(all)
+                                                    .resize(500, Math.round(500 * 9 / 16))
+                                                    .toBuffer(posterName, (err, buff) => {
+                                                        let stream = require('stream');
 
+                                                        let bufferStream = new stream.PassThrough();
 
-        })
+                                                        bufferStream.end(buff);
+                                                        ThumbnailGridFsSmall.write({filename: posterName}, bufferStream,
+                                                            async (error, file) => {
 
+                                                                const filmBody = {
+                                                                    _id: req.files.file[0].id,
+                                                                    author: user.id,
+                                                                    description: req.body.description,
+                                                                    title: req.body.title
+                                                                };
+
+                                                                let film = null;
+
+                                                                thumbnailBody.poster = file._id;
+                                                                filmBody.thumbnail = thumbnailBody;
+                                                                try {
+                                                                    film = await Film.create(filmBody)
+                                                                        .then((film) => film.view(true));
+                                                                } catch (e) {
+
+                                                                    const FilmGridFs = createModel({
+                                                                        modelName: 'films',
+                                                                        bucketName: 'films',
+                                                                        connection: mongoose.connection
+                                                                    });
+
+                                                                    return FilmGridFs.unlink(req.files.file[0].id, (err, doc) => {
+                                                                        res.status(400).send(e).end();
+                                                                    });
+                                                                }
+
+                                                                if (film) {
+                                                                    user.films.push(film.id);
+
+                                                                    {
+                                                                        await user.save();
+                                                                        success(res, 201)(film);
+                                                                    }
+                                                                }
+                                                            });
+                                                    });
+
+                                            });
+                                    });
+                            });
+                    })
+            });
+        });
     });
-
+    //});
 };
 
 
@@ -160,65 +213,55 @@ const index = ({query}, res, next) => {
         });
 };
 
+
 const showFilm = (req, res, next) => {
+
     const {params} = req;
+    const mongoose = require('../../services/mongoose');
 
-    const FilmGridFs = require('./gridfs');
+    const FilmGridFs = createModel({
+        modelName: 'films',
+        bucketName: 'films',
+        connection: mongoose.connection
+    });
 
-    FilmGridFs.findById(params.id, (err, doc) => {
 
-        if (err || doc === null) return notFound(res)();
+    FilmGridFs.findById({start: 10, end: 20, _id: params.id}, (err, film) => {
+        if (err || film === null) return notFound(res)();
 
-        let filmStream = FilmGridFs.readById(params.id);
+        if (req.headers['range']) {
 
-        let gridStore = filmStream._store;
-        gridStore.open(function (err, GridFile) {
-            if (!GridFile) {
-                res.send(404, 'Not Found');
-                return;
-            }
-            if (req.headers['range']) {
+            console.log("HEAD RANGE");
+            let positions = req.headers['range'].replace(/bytes=/, "").split("-");
+            let start = parseInt(positions[0], 10);
+            let total = film.length;
+            let end = positions[1] ? parseInt(positions[1], 10) : total - 1;
+            let chunksize = (end - start) + 1;
 
-                let parts = req.headers['range'].replace(/bytes=/, "").split("-");
-                let partialstart = parts[0];
-                let partialend = parts[1];
-
-                let start = parseInt(partialstart, 10);
-                let end = partialend ? parseInt(partialend, 10) : doc.length - 1;
-                let chunksize = (end - start) + 1;
-
-                res.writeHead(206, {
-                    'Content-Range': 'bytes ' + start + '-' + end + '/' + doc.length,
-                    'Accept-Ranges': 'bytes',
-                    'Content-Length': chunksize,
-                    'Content-Type': doc.contentType
-                });
-
-                GridFile.seek(start, function () {
-                    let stream = GridFile.stream(true);
-
-                    stream.on('data', function (buff) {
-
-                        if (start >= end) {
-                            GridFile.close();
-                            res.end();
-                        } else {
-                            res.write(buff);
-                        }
-                    });
-                });
-
-            } else {
-
-                res.header('Content-Type', doc.contentType);
-                res.header('Content-Length', doc.length);
-                let stream = GridFile.stream(true);
-                stream.pipe(res);
+            let maxChunk = 1024 * 1024; // 1MB at a time
+            if (chunksize > maxChunk) {
+                end = start + maxChunk - 1;
+                chunksize = (end - start) + 1;
             }
 
-        });
+            res.writeHead(206, {
+                'Content-Range': 'bytes ' + start + '-' + end + '/' + total,
+                'Accept-Ranges': 'bytes',
+                'Content-Length': chunksize,
+                'Content-Type': film.contentType
+            });
 
 
+            let filmStream = FilmGridFs.read({start: start, end: end, filename: film.filename});
+            filmStream.pipe(res);
+
+        } else {
+            console.log("NORMAl REQUEST");
+            res.header('Content-Type', film.contentType);
+            res.header('Content-Length', film.length);
+            let filmStream = FilmGridFs.read({filename: film.filename});
+            filmStream.pipe(res);
+        }
     });
 
 };
@@ -336,8 +379,15 @@ const showOneFilmDescriptionAndComments = (req, res, next) => {
         });
 };
 
+
 const showThumbnail = async ({params, query}, res, next) => {
 
+    const mongoose = require('../../services/mongoose');
+
+    const ThumbnailGridFs = createModel({
+        bucketName: 'thumbnails',
+        connection: mongoose.connection
+    });
 
     let film = await Film
         .findOne({_id: params.film_id});
@@ -360,47 +410,56 @@ const showThumbnail = async ({params, query}, res, next) => {
         width = parseInt(query.width);
         height = Math.round(width / ratio);
     }
+    let thumbnailId = film.thumbnail._id;
 
-    const thumbnailId = film.thumbnail._id;
+    if (query.width && query.width === 'small') {
+        thumbnailId = film.thumbnail.small;
+    }
+    if (query.width && query.width === 'poster') {
+        thumbnailId = film.thumbnail.poster;
+    }
+    if (query.width && query.width === 'preview') {
+        thumbnailId = film.thumbnail.preview;
+    }
 
-    const ThumbnailGridFs = require('./../thumbnail/gridfs');
+    ThumbnailGridFs.findById({_id: ObjectId(thumbnailId)}, (err, thumbnail) => {
 
-    ThumbnailGridFs.findById(thumbnailId, (err, doc) => {
 
-        if (err || doc === null)
+        if (err || thumbnail === null)
             return notFound(res)();
 
 
-        let stream = ThumbnailGridFs.readById(ObjectId(thumbnailId));
+        let stream = thumbnail.read();
 
-        stream.on('error', function (err) {
-            console.log("err");
-        });
+        if (query.width && query.width !== 'small' && query.width !== 'poster'  && query.width !== 'preview') {
+            let buffer = [];
 
+            stream.on('data', function (chunk) {
+                buffer.push(chunk);
 
-        let buffer = [];
+            });
 
-        stream.on('data', function (chunk) {
-            buffer.push(chunk);
+            stream.on('end', async function () {
+                let all = new Buffer.concat(buffer);
+                await sharp(all)
+                    .resize(width, height)
+                    .toBuffer()
+                    .then(data => {
+                        res.set('Content-Length', data.length);
+                        res.set('Content-Type', thumbnail.contentType);
+                        res.write(data);
+                        res.end();
 
-        });
-
-        stream.on('end', async function () {
-            let all = new Buffer.concat(buffer);
-            await sharp(all)
-                .resize(width, height)
-                .toBuffer()
-                .then(data => {
-                    res.set('Content-Length', data.length);
-                    res.set('Content-Type', doc.contentType);
-                    res.write(data);
-                    res.end();
-
-                })
-                .catch(err => {
-                    console.log(err)
-                });
-        });
+                    })
+                    .catch(err => {
+                        console.log(err)
+                    });
+            });
+        } else {
+            res.set('Content-Length', thumbnail.length);
+            res.set('Content-Type', thumbnail.contentType);
+            stream.pipe(res);
+        }
 
     });
 
@@ -447,12 +506,26 @@ const updateMeta = function ({body, params}, res, next) {
 
 const destroy = async (req, res, next) => {
 
+
     const {film_id} = req.params;
     const user = req.user;
 
-    const FilmGridFs = require('./gridfs');
+    const mongoose = require('../../services/mongoose');
 
-    await FilmGridFs.unlinkById({_id: film_id}, (err, doc) => {
+    const FilmGridFs = createModel({
+        modelName: 'films',
+        bucketName: 'films',
+        connection: mongoose.connection
+    });
+
+    const ThumbnailGridFs = createModel({
+        modelName: 'thumbnails',
+        bucketName: 'thumbnails',
+        connection: mongoose.connection
+    });
+
+
+    await FilmGridFs.unlink({_id: film_id}, (err, doc) => {
         if (err || doc === null) {
             return notFound(res)(doc);
         }
@@ -465,8 +538,31 @@ const destroy = async (req, res, next) => {
         return notFound(res)(null);
     }
 
-    const ThumbnailGridFs = require('../thumbnail/gridfs');
-    await ThumbnailGridFs.unlinkById({_id: film.thumbnail.id}, (err, doc) => {
+    await ThumbnailGridFs.unlink({_id: film.thumbnail.id}, (err, doc) => {
+        if (err || doc === null) {
+            return notFound(res)(doc);
+
+        }
+
+    });
+
+    await ThumbnailGridFs.unlink({_id: film.thumbnail.small}, (err, doc) => {
+        if (err || doc === null) {
+            return notFound(res)(doc);
+
+        }
+
+    });
+
+    await ThumbnailGridFs.unlink({_id: film.thumbnail.poster}, (err, doc) => {
+        if (err || doc === null) {
+            return notFound(res)(doc);
+
+        }
+
+    });
+
+    await ThumbnailGridFs.unlink({_id: film.thumbnail.preview}, (err, doc) => {
         if (err || doc === null) {
             return notFound(res)(doc);
 

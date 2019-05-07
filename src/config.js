@@ -35,7 +35,7 @@ const config = {
     },
     development: {
         mongo: {
-            uri: 'mongodb+srv://Admin:marian12@filmappcluset-tuxyg.mongodb.net/filmapp-development?retryWrites=true',
+            uri:  'mongodb+srv://Admin:marian12@filmappcluset-tuxyg.mongodb.net/filmapp-development?retryWrites=true',
             options: {
                 debug: true,
             }

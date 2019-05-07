@@ -1,10 +1,10 @@
-const gridfs = require('mongoose-gridfs');
 const mongoose = require('../../services/mongoose');
+const { createModel } = require('mongoose-gridfs');
 
-const thumbnailModelGridFS = gridfs(
+const thumbnailModelGridFS = createModel(
     {
         collection: 'films',
-        model: 'ThumbnailGridFS',
+        modelName: 'ThumbnailGridFS',
         mongooseConnection: mongoose.connection
     }
 );

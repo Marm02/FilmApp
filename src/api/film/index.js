@@ -2,6 +2,8 @@ const {Router} = require('express');
 const {
     create, index, showFilm, showOneFilmDescriptionWithoutComments, showOneFilmDescriptionAndComments,
     showThumbnail, update, destroy, showAllSortByViews, showAllSortByLikes, filterByTitle, showAllSortByCreationDate, updateMeta
+
+    ,createNew, showFilmNew,showThumbnailNew
 }
     = require('./controller');
 
@@ -15,13 +17,13 @@ const router = new Router();
 
 router.post('/',
     token({required: true}),
-    create);
+    createNew);
 
 router.get('/',
     index);
 
 router.get('/:id',
-    showFilm);
+    showFilmNew);
 
 router.get('/:id/desc/no',
     showOneFilmDescriptionWithoutComments);
@@ -42,7 +44,7 @@ router.put('/:id/meta',
     updateMeta);
 
 router.get('/:film_id/thumbnail/:id',
-    showThumbnail);
+    showThumbnailNew);
 
 
 router.post('/:film_id/comments',

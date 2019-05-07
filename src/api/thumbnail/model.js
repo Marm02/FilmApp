@@ -2,14 +2,20 @@ const mongoose = require('mongoose');
 const {Schema} = require('mongoose');
 
 const thumbnailSchema = new Schema({
-    film: {
-        type: Schema.ObjectId,
-        ref: 'Film'
+    small: {
+        type: Schema.ObjectId
+    },
+    poster: {
+    type: Schema.ObjectId
+    },
+    preview: {
+        type:Schema.ObjectId
     }
+
 
 }, {
 
-    timestamps: true
+    //timestamps: true
 
 });
 
@@ -17,7 +23,9 @@ const thumbnailSchema = new Schema({
 thumbnailSchema.methods = {
     view(full) {
         const view = {
-            film: this.user,
+            small: this.small,
+            poster: this.poster,
+            preview: this.preview,
             id: this._id,
         };
 

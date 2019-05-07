@@ -7,20 +7,17 @@ const config = require('../../config');
 
 const storage = new GridFsStorage({
     url: config.mongo.uri,
-    thumbnail: (req, thumbnail) => {
-        return {
-            filename: path.parse(thumbnail.originalname).name + Date.now() + '.' + mime.extension(thumbnail.mimetype),
-            bucketName: 'thumbnails',
-            metadata: {
-                originalname: thumbnail.originalname
-            }
-        };
-    },
-
     file: (req, file) => {
+
+        let bucketName = 'films';
+
+        if(file.fieldname === 'thumbnail') {
+            bucketName = 'thumbnails';
+        }
+
         return {
             filename: path.parse(file.originalname).name + Date.now() + '.' + mime.extension(file.mimetype),
-            bucketName: 'films',
+            bucketName: bucketName,
             metadata: {
                 originalname: file.originalname
             }

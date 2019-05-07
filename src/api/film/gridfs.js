@@ -1,11 +1,11 @@
-const gridfs = require('mongoose-gridfs');
 const mongoose = require('../../services/mongoose');
+const { createModel } = require('mongoose-gridfs');
 
-const filmFileModel = gridfs(
+const filmFileModel = createModel(
     {
-        collection: 'films',
-        model: 'FilmFile',
-        mongooseConnection: mongoose.connection
+        bucketName: 'films',
+        modelName: 'Film',
+        connection: mongoose.connection
     }
 );
 
