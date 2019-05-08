@@ -39,74 +39,65 @@ const showAll = async (req, res, next) => {
 
     const {query} = req;
 
-    Playlist.find({films: {$exists: true, $ne: []}}).skip(parseInt(query.start)).limit(parseInt(query.limit))
+    Playlist.find({films: {$exists: true, $ne: []}}, '_id').skip(parseInt(query.start)).limit(parseInt(query.limit))
         .then(playlists => {
-            const requests = [];
-
+            console.log(playlists);
+            let requests = [];
             playlists.map((playlist) => {
                 requests.push(
-                    Film.findById(playlist.films[0], 'thumbnail')
-                        .then(thumbnail => {
-                            playlist.set('thumbnail', thumbnail._id, {strict: false});
-                            return playlist;
-                        })
-                        .then(async res => {
-                            await User.findById(playlist.author, 'nick')
-                                .then(author => {
-                                    const name = author && author.nick ? author.nick : 'user deleted';
-                                    playlist.set('author_name', name, {strict: false});
-                                    return playlist;
-                                })
-                                .catch(next);
-                            return playlist;
-                        })
-                        .catch(async next => {
+                    Playlist.findById(playlist._id)
+                        .populate({path: 'films', $exists: true, options: {limit: 1}})
+                        .then(async playlist => {
 
-                            let thumbnailSet = false;
-
-                            for (let film of playlist.films) {
-                                Film.findById(film, 'thumbnail').then(film => {
-                                    playlist.set('filmThumbnail', film._id, {strict: false});
-                                    playlist.set('thumbnail', film.thumbnail._id, {strict: false});
-                                    thumbnailSet = true;
-                                });
-
-                                if (thumbnailSet)
-                                    break;
+                            if (playlist.films.length === 0) {
+                                return;
                             }
 
-                            await User.findById(playlist.author, 'nick')
-                                .then(author => {
-                                    const name = author && author.nick ? author.nick : 'user deleted';
-                                    playlist.set('author_name', name, {strict: false});
-                                    return playlist;
-                                })
-                                .catch(next);
-                            return playlist;
+                            let thumbnail = await Film.findById(playlist.films[0]._id, 'thumbnail')
+                                .then(thumbnail => {
+                                    return thumbnail;
+                                });
 
-                        }))
+                            let userName = await User.findById(playlist.author, 'nick')
+                                .then(author => {
+                                    return author && author.nick ? author.nick : 'user deleted';
+                                });
+
+
+                            {
+                                playlist.set('author_name', userName, {strict: false});
+                                playlist.set('thumbnail', thumbnail._id, {strict: false});
+                                return playlist;
+                            }
+
+                        })
+                )
             });
 
             Promise.all(requests).then((playlists) => {
-                return playlists;
+                return playlists.filter(function (el) {
+                    return el != null;
+                });
             })
                 .then((playlists) => playlists.map((playlist) => {
+
                     return {
                         id: playlist._id,
-                        films: playlist.films,
+                        filmID: playlist.films[0]._id,
                         author: playlist.author,
                         title: playlist.title,
                         isPublic: playlist.isPublic,
                         thumbnail: playlist.get('thumbnail'),
-                        authorName: playlist.get('author_name'),
-                        filmThumbnail: playlist.get('filmThumbnail')
+                        authorName: playlist.get('author_name')
                     };
                 }))
                 .then(success(res))
-                .catch(next);
+                .catch(next => {
+                    console.log(next)
+                });
 
+        })
 
-        });
 };
 
 

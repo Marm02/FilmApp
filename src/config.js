@@ -3,7 +3,7 @@ const merge = require('lodash/merge');
 
 const config = {
     all: {
-        env: process.env.NODE_ENV || 'development',
+        env: process.env.NODE_ENV || 'production',
         root: path.join(__dirname, '..'),
         port: 9000,
         ip: 'localhost',

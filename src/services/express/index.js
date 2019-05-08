@@ -5,7 +5,8 @@ const path = require('path');
 const expressConfig = (apiRoot, routes) => {
     const app = express();
 
-    app.use(cors({origin: 'https://marm02.github.io'}));
+    //app.use(cors({origin: 'https://marm02.github.io'}));
+    app.use(cors({origin: 'http://localhost:3000'}));
 
     app.use(bodyParser.urlencoded({extended: false}));
     app.use(bodyParser.json());
