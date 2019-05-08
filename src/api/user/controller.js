@@ -7,14 +7,10 @@ const Film = require('../film/model').model;
 const {sign} = require('../../services/jwt');
 const _ = require('lodash');
 const catchDuplicateEmail = require("./helpers").catchDuplicateEmail;
-const {ip} = require('../../config');
-
 
 const async = require('async');
 const crypto = require('crypto');
 const sendmail = require('../../services/email');
-
-const port = "3000";
 
 const index = (req, res, next) =>
     User.find()
@@ -32,30 +28,33 @@ const show = ({params}, res, next) =>
 const showMe = ({user}, res) =>
     res.json(user.view(true));
 
-const showMyPlaylists = ({user}, res, next) => {
+const showMyPlaylists =  ({user}, res, next) => {
     let myPlaylists = user.playlists;
 
     const requests = [];
 
-    myPlaylists.forEach(playlist => {
+    myPlaylists.map(playlist => {
         requests.push(
             Playlist.findById(playlist)
-                .then(notFound(res))
+                .populate('films')
                 .then(res => {
                     return {
                         id: playlist,
                         title: res.title,
                         films: res.films,
+                        filmID: (res.films[0] !== null && res.films.length !== 0) ? res.films[0]._id : null,
+                        thumbnail: (res.films[0] !== null && res.films.length !== 0) ? res.films[0].thumbnail._id : null,
                         createdAt: res.createdAt
                     }
                 })
-                .catch(next)
         );
     });
 
     Promise.all(requests)
         .then(success(res))
-        .catch(next);
+        .catch(next => {
+            console.log(next)
+        });
 
 };
 

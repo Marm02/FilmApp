@@ -10,7 +10,7 @@ const app = express(apiRoot, api);
 
 const server = http.createServer(app);
 
-mongoose.connect(mongo.uri);
+mongoose.connect(mongo.uri, { poolSize: 100 });
 
 setImmediate(function () {
     server.listen(port, ip, function () {

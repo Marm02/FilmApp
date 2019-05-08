@@ -152,11 +152,9 @@ const create = async (req, res, next) => {
             });
         });
     });
-    //});
 };
 
 
-// TODO zmienic nazwe na showFilmsWithComments
 
 const index = ({query}, res, next) => {
 
