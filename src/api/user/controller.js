@@ -38,10 +38,11 @@ const showMyPlaylists =  ({user}, res, next) => {
             Playlist.findById(playlist)
                 .populate('films')
                 .then(res => {
+                    let resultFilms = res.films.map(a => a._id);
                     return {
                         id: playlist,
                         title: res.title,
-                        films: res.films,
+                        films: resultFilms,
                         filmID: (res.films[0] !== null && res.films.length !== 0) ? res.films[0]._id : null,
                         thumbnail: (res.films[0] !== null && res.films.length !== 0) ? res.films[0].thumbnail._id : null,
                         createdAt: res.createdAt
