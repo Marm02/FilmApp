@@ -175,6 +175,40 @@ const index = ({query}, res, next) => {
         });
 };
 
+const indexOnlyTitle = ({query}, res, next) => {
+
+    let projection = {
+        title: 'title'
+    };
+
+    let exclude = {};
+
+    if (query.exclude && !ObjectId.isValid(query.exclude)) {
+        return res.status(400).end();
+    }
+
+    if (query.exclude)
+        exclude = {_id: {$nin: [query.exclude]}};
+
+
+    Film.find({title: new RegExp(query.search)}, projection).skip(parseInt(query.start)).limit(parseInt(query.limit))
+        .then(films => {
+            console.log(films);
+            films = films.map(film => {
+                return {
+                    id: film._id,
+                    title: film.title
+                };
+            });
+            console.log(films)
+            return films;
+        })
+        .then(success(res))
+        .catch(next);
+
+};
+
+
 
 const showFilm = (req, res, next) => {
 
@@ -726,5 +760,6 @@ module.exports = {
     showAllSortByViews,
     showAllSortByLikes,
     filterByTitle,
-    updateMeta
+    updateMeta,
+    indexOnlyTitle
 };

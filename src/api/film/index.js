@@ -1,7 +1,8 @@
 const {Router} = require('express');
 const {
     create, index, showFilm, showOneFilmDescriptionWithoutComments, showOneFilmDescriptionAndComments,
-    showThumbnail, update, destroy, showAllSortByViews, showAllSortByLikes, filterByTitle, showAllSortByCreationDate, updateMeta
+    showThumbnail, update, destroy, showAllSortByViews, showAllSortByLikes, filterByTitle, showAllSortByCreationDate, updateMeta,
+    indexOnlyTitle
 }
     = require('./controller');
 
@@ -19,6 +20,9 @@ router.post('/',
 
 router.get('/',
     index);
+
+router.get('/titles',
+    indexOnlyTitle);
 
 router.get('/:id',
     showFilm);
