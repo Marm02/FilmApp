@@ -6,32 +6,19 @@ const thumbnailSchema = new Schema({
         type: Schema.ObjectId
     },
     poster: {
-    type: Schema.ObjectId
-    },
-    preview: {
-        type:Schema.ObjectId
+        type: Schema.ObjectId
     }
-
-
-}, {
-
-    //timestamps: true
 
 });
 
 
 thumbnailSchema.methods = {
     view(full) {
-        const view = {
+        return {
+            id: this._id,
             small: this.small,
             poster: this.poster,
-            preview: this.preview,
-            id: this._id,
         };
-
-        return full ? {
-            ...view
-        } : view;
     }
 };
 

@@ -104,7 +104,18 @@ const showAll = async (req, res, next) => {
 const show = ({params}, res, next) =>
     Playlist.findById(params.id)
         .then(notFound(res))
-        .then((playlist) => playlist ? playlist.view(true) : null)
+        .then(async playlist => {
+            let userName = await User.findById(playlist.author, 'nick')
+                .then(author => {
+                    return author && author.nick ? author.nick : 'user deleted';
+                });
+
+            playlist = playlist ? playlist.view(true) : null;
+            {
+                playlist.author_name = userName;
+                return playlist;
+            }
+        })
         .then(success(res))
         .catch(next);
 

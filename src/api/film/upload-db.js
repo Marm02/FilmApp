@@ -28,13 +28,21 @@ const storage = new GridFsStorage({
 
 function fileFilter(req, file, done) {
 
+    if(req.body.title === ''){
+        return done(new Error(`Path title is required!`))
 
-    if (file.mimetype === mime.types.mp4 || file.mimetype === mime.types.ogg
-        || file.mimetype === mime.types.jpeg || file.mimetype === mime.types.png) {
+    }else if(req.body.description === ''){
+        return done(new Error(`Path description is required!`))
+    }
+
+    const fieldname = file.fieldname === 'thumbnail' ? file.fieldname : 'film';
+
+    if ((file.fieldname === 'file' && (file.mimetype === mime.types.mp4 || file.mimetype === mime.types.ogg))
+        || ((file.fieldname === 'thumbnail') && (file.mimetype === mime.types.jpeg || file.mimetype === mime.types.png))) {
         return done(null, true)
     }
 
-    done(new Error(`File type: ${file.mimetype} is not allowed!`))
+    done(new Error(`File type: ${file.mimetype} for field ${fieldname} is not allowed!`))
 }
 
 const uploadDrive = multer({storage: storage, fileFilter: fileFilter}).fields([{name: 'file', maxCount: 1},
