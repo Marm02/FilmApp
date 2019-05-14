@@ -59,8 +59,12 @@ const showMyPlaylists =  ({user}, res, next) => {
 
 };
 
-const showMyFilms = ({user}, res, next) => {
+const showMyFilms = ({user, query}, res, next) => {
     let myFilms = user.films;
+
+    let start = query.start ? query.start : 0;
+    let limit = query.limit ? (query.limit >= myFilms.length ? myFilms.length - 1 : query.limit)
+        : myFilms.length - 1;
 
     const requests = [];
 

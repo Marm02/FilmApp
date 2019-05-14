@@ -50,6 +50,7 @@ const create = async (req, res, next) => {
 
                 let all = new Buffer.concat(buffer);
 
+                const previewName = originalName + Date.now() + '_preview.' + mime;
                 const fileName = originalName + Date.now() + '_thumbnail.' + mime;
                 const posterName = originalName + Date.now() + '_poster.' + mime;
 
@@ -57,10 +58,9 @@ const create = async (req, res, next) => {
                 let thumbnailBody = {
                     _id: req.files.thumbnail[0].id,
                 };
-
                 await sharp(all)
-                    .resize(250, Math.round(250 * 9 / 16))
-                    .toBuffer(fileName, (err, buff) => {
+                    .resize(25, Math.round(25 * 9 / 16))
+                    .toBuffer(previewName, (err, buff) => {
 
                         let stream = require('stream');
 
@@ -68,48 +68,65 @@ const create = async (req, res, next) => {
 
                         bufferStream.end(buff);
 
-                        ThumbnailGridFsSmall.write({filename: fileName}, bufferStream,
+                        ThumbnailGridFsSmall.write({filename: previewName}, bufferStream,
                             async (error, file) => {
 
-                                thumbnailBody.small = file._id;
+                                thumbnailBody.preview = file._id;
 
                                 await sharp(all)
-                                    .resize(500, Math.round(500 * 9 / 16))
-                                    .toBuffer(posterName, (err, buff) => {
+                                    .resize(250, Math.round(250 * 9 / 16))
+                                    .toBuffer(fileName, (err, buff) => {
+
                                         let stream = require('stream');
 
                                         let bufferStream = new stream.PassThrough();
 
                                         bufferStream.end(buff);
-                                        ThumbnailGridFsSmall.write({filename: posterName}, bufferStream,
+
+                                        ThumbnailGridFsSmall.write({filename: fileName}, bufferStream,
                                             async (error, file) => {
 
-                                                const filmBody = {
-                                                    _id: req.files.file[0].id,
-                                                    author: user.id,
-                                                    description: req.body.description,
-                                                    title: req.body.title
-                                                };
+                                                thumbnailBody.small = file._id;
 
-                                                let film = null;
+                                                await sharp(all)
+                                                    .resize(500, Math.round(500 * 9 / 16))
+                                                    .toBuffer(posterName, (err, buff) => {
+                                                        let stream = require('stream');
 
-                                                thumbnailBody.poster = file._id;
-                                                filmBody.thumbnail = thumbnailBody;
-                                                try {
-                                                    film = await Film.create(filmBody)
-                                                        .then((film) => film.view(true));
-                                                } catch (e) {
-                                                    res.status(400).send(e).end();
-                                                }
+                                                        let bufferStream = new stream.PassThrough();
 
-                                                if (film) {
-                                                    user.films.push(film.id);
+                                                        bufferStream.end(buff);
+                                                        ThumbnailGridFsSmall.write({filename: posterName}, bufferStream,
+                                                            async (error, file) => {
 
-                                                    {
-                                                        await user.save();
-                                                        success(res, 201)(film);
-                                                    }
-                                                }
+                                                                const filmBody = {
+                                                                    _id: req.files.file[0].id,
+                                                                    author: user.id,
+                                                                    description: req.body.description,
+                                                                    title: req.body.title
+                                                                };
+
+                                                                let film = null;
+
+                                                                thumbnailBody.poster = file._id;
+                                                                filmBody.thumbnail = thumbnailBody;
+                                                                try {
+                                                                    film = await Film.create(filmBody)
+                                                                        .then((film) => film.view(true));
+                                                                } catch (e) {
+                                                                    res.status(400).send(e).end();
+                                                                }
+
+                                                                if (film) {
+                                                                    user.films.push(film.id);
+
+                                                                    {
+                                                                        await user.save();
+                                                                        success(res, 201)(film);
+                                                                    }
+                                                                }
+                                                            });
+                                                    });
                                             });
                                     });
                             });
@@ -200,7 +217,7 @@ const indexOnlyTitle = ({query}, res, next) => {
                     title: film.title
                 };
             });
-            console.log(films)
+            console.log(films);
             return films;
         })
         .then(success(res))
@@ -209,13 +226,11 @@ const indexOnlyTitle = ({query}, res, next) => {
 };
 
 
-
 const showFilm = (req, res, next) => {
 
     const {params} = req;
 
     const FilmGridFs = require('./gridfs');
-
 
 
     FilmGridFs.findById({start: 10, end: 20, _id: params.id}, (err, film) => {
@@ -407,6 +422,10 @@ const showThumbnail = async ({params, query}, res, next) => {
         thumbnailId = film.thumbnail.poster;
     }
 
+  if (query.width && query.width === 'preview') {
+        thumbnailId = film.thumbnail.preview;
+    }
+
 
     ThumbnailGridFs.findById({_id: ObjectId(thumbnailId)}, (err, thumbnail) => {
 
@@ -417,7 +436,7 @@ const showThumbnail = async ({params, query}, res, next) => {
 
         let stream = thumbnail.read();
 
-        if (query.width && query.width !== 'small' && query.width !== 'poster') {
+        if (query.width && query.width !== 'small' && query.width !== 'poster' && query.width !== 'preview') {
             let buffer = [];
 
             stream.on('data', function (chunk) {
@@ -471,6 +490,55 @@ const update = function ({user, body, params}, res, next) {
         return res.status(403).end()
     }
 
+};
+
+const updatePoster = function (req, res, next) {
+  Film.find({})
+      .then(films => {
+
+          films.forEach(film =>{
+              const ThumbnailGridFs = require('../thumbnail/gridfs');
+              const ThumbnailGridFsSmall = require('../thumbnail/gridfs');
+
+              ThumbnailGridFs.findById({_id: film.thumbnail._id}, (err, thumbnail) => {
+                  const [originalName, mime] = thumbnail.metadata.originalname.split('.');
+                  let filmStream = ThumbnailGridFs.read({filename: thumbnail.filename});
+
+                  let buffer = [];
+
+                  filmStream.on('data', function (chunk) {
+                      buffer.push(chunk);
+                  });
+
+                  filmStream.on('end', async function () {
+
+                      let all = new Buffer.concat(buffer);
+
+                      const previewName = originalName + Date.now() + '_preview.' + mime;
+
+
+                      await sharp(all)
+                          .resize(25, Math.round(25 * 9 / 16))
+                          .toBuffer(previewName, (err, buff) => {
+
+                              let stream = require('stream');
+
+                              let bufferStream = new stream.PassThrough();
+
+                              bufferStream.end(buff);
+
+                              ThumbnailGridFsSmall.write({filename: previewName}, bufferStream,
+                                  async (error, file) => {
+
+                                      film.thumbnail.preview = file._id;
+                                      film.save();
+                                  });
+                          });
+                  });
+              });
+          });
+          console.log(films)
+      })
 };
 
 const updateMeta = function ({body, params}, res, next) {
@@ -532,6 +600,10 @@ const destroy = async (req, res, next) => {
         if (err || doc === null) {
             return notFound(res)(doc);
         }
+    });
+
+   await ThumbnailGridFs.unlink({_id: film.thumbnail.preview}, (err, doc) => {
+        if (err || doc === null) {}
     });
 
 
@@ -761,5 +833,6 @@ module.exports = {
     showAllSortByLikes,
     filterByTitle,
     updateMeta,
-    indexOnlyTitle
+    indexOnlyTitle,
+    updatePoster
 };

@@ -7,6 +7,9 @@ const thumbnailSchema = new Schema({
     },
     poster: {
         type: Schema.ObjectId
+    },
+    preview: {
+        type: Schema.ObjectId
     }
 
 });
@@ -18,6 +21,7 @@ thumbnailSchema.methods = {
             id: this._id,
             small: this.small,
             poster: this.poster,
+            preview: this.poster,
         };
     }
 };
