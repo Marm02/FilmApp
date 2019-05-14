@@ -492,54 +492,6 @@ const update = function ({user, body, params}, res, next) {
 
 };
 
-const updatePoster = function (req, res, next) {
-  Film.find({})
-      .then(films => {
-
-          films.forEach(film =>{
-              const ThumbnailGridFs = require('../thumbnail/gridfs');
-              const ThumbnailGridFsSmall = require('../thumbnail/gridfs');
-
-              ThumbnailGridFs.findById({_id: film.thumbnail._id}, (err, thumbnail) => {
-                  const [originalName, mime] = thumbnail.metadata.originalname.split('.');
-                  let filmStream = ThumbnailGridFs.read({filename: thumbnail.filename});
-
-                  let buffer = [];
-
-                  filmStream.on('data', function (chunk) {
-                      buffer.push(chunk);
-                  });
-
-                  filmStream.on('end', async function () {
-
-                      let all = new Buffer.concat(buffer);
-
-                      const previewName = originalName + Date.now() + '_preview.' + mime;
-
-
-                      await sharp(all)
-                          .resize(25, Math.round(25 * 9 / 16))
-                          .toBuffer(previewName, (err, buff) => {
-
-                              let stream = require('stream');
-
-                              let bufferStream = new stream.PassThrough();
-
-                              bufferStream.end(buff);
-
-                              ThumbnailGridFsSmall.write({filename: previewName}, bufferStream,
-                                  async (error, file) => {
-
-                                      film.thumbnail.preview = file._id;
-                                      film.save();
-                                  });
-                          });
-                  });
-              });
-          });
-          console.log(films)
-      })
-};
 
 const updateMeta = function ({body, params}, res, next) {
 
@@ -833,6 +785,5 @@ module.exports = {
     showAllSortByLikes,
     filterByTitle,
     updateMeta,
-    indexOnlyTitle,
-    updatePoster
+    indexOnlyTitle
 };

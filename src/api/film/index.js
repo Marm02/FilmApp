@@ -2,7 +2,7 @@ const {Router} = require('express');
 const {
     create, index, showFilm, showOneFilmDescriptionWithoutComments, showOneFilmDescriptionAndComments,
     showThumbnail, update, destroy, showAllSortByViews, showAllSortByLikes, filterByTitle, showAllSortByCreationDate, updateMeta,
-    indexOnlyTitle, updatePoster
+    indexOnlyTitle
 }
     = require('./controller');
 
@@ -20,9 +20,6 @@ router.post('/',
 
 router.get('/',
     index);
-
-router.get('/updatePoster',
-    updatePoster);
 
 router.get('/titles',
     indexOnlyTitle);
